@@ -1,5 +1,6 @@
 #ifndef __HIGH_CONCURRENT_MEMORY_POOL_COMMON_H__
 #define __HIGH_CONCURRENT_MEMORY_POOL_COMMON_H__
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstring>
