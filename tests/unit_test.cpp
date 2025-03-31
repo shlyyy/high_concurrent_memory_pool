@@ -160,12 +160,12 @@ void BenchmarkConcurrentMalloc(size_t ntimes, size_t nworks, size_t rounds) {
          malloc_costtime.load() + free_costtime.load());
 }
 
-int main() {
+int main2() {
   TestObjectPool();
   return 0;
 }
 
-int main2() {
+int main() {
   size_t n = 100000;
   std::cout << "=========================================================="
             << std::endl;

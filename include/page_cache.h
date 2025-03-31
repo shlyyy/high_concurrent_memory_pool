@@ -1,6 +1,7 @@
 #ifndef __HIGH_CONCURRENT_MEMORY_POOL_PAGE_CACHE_H__
 #define __HIGH_CONCURRENT_MEMORY_POOL_PAGE_CACHE_H__
 #include "common.h"
+#include "object_pool.h"
 
 class PageCache {
  public:
@@ -27,6 +28,9 @@ class PageCache {
  private:
   SpanList span_lists_[N_PAGES_BUCKET];
   std::unordered_map<size_t, Span*> page_id_span_map_;
+
+  // span 对象的申请和释放都是在 page cache 中进行的
+  ObjectPool<Span> span_pool_;
 };
 
 #endif  // __HIGH_CONCURRENT_MEMORY_POOL_PAGE_CACHE_H__

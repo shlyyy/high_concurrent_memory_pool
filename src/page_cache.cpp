@@ -9,7 +9,8 @@ Span* PageCache::new_span(size_t page_count) {
 
   // 大于 128 个页的 span 直接从系统中获取
   if (page_count > N_PAGES_BUCKET - 1) {
-    Span* span = new Span;
+    // Span* span = new Span;
+    Span* span = span_pool_.New();
     void* ptr = system_alloc(page_count);
     span->page_id_ = reinterpret_cast<size_t>(ptr) >> kPageShift;
     span->n_pages_ = page_count;
@@ -37,7 +38,8 @@ Span* PageCache::new_span(size_t page_count) {
       // 大块 span
       Span* span = span_lists_[i].pop_front();
       // 切分下来的小块 span 作为返回值，无需插入到 span_lists_ 中
-      Span* split = new Span;
+      // Span* split = new Span;
+      Span* split = span_pool_.New();
       split->page_id_ = span->page_id_;
       split->n_pages_ = page_count;
 
@@ -62,7 +64,8 @@ Span* PageCache::new_span(size_t page_count) {
 
   // 说明已经没有足够大的 span 可以切分了，只能从系统中获取
   // 从系统中申请 128 页的 span
-  Span* system_allocated_span = new Span;
+  // Span* system_allocated_span = new Span;
+  Span* system_allocated_span = span_pool_.New();
   void* ptr = system_alloc(N_PAGES_BUCKET - 1);  // 128 个页
   system_allocated_span->page_id_ =
       reinterpret_cast<size_t>(ptr) / SYSTEM_PAGE_SIZE;
@@ -93,7 +96,8 @@ void PageCache::release_span_to_page_cache(Span* span) {
     system_dealloc(ptr, span->n_pages_);
 
     // 释放 span 对象
-    delete span;
+    // delete span;
+    span_pool_.Delete(span);
     return;
   }
 
@@ -124,7 +128,8 @@ void PageCache::release_span_to_page_cache(Span* span) {
 
     // 从 span_lists_ 中移除
     span_lists_[prev_span->n_pages_].erase(prev_span);
-    delete prev_span;
+    // delete prev_span;
+    span_pool_.Delete(prev_span);
   }
 
   // 向后合并
@@ -153,7 +158,8 @@ void PageCache::release_span_to_page_cache(Span* span) {
 
     // 从 span_lists_ 中移除
     span_lists_[next_span->n_pages_].erase(next_span);
-    delete next_span;
+    // delete next_span;
+    span_pool_.Delete(next_span);
   }
 
   // 将合并后的 span 插入到新的桶中，插入到 span_lists_ 中
