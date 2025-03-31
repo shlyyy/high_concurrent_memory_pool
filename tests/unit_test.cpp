@@ -1,5 +1,69 @@
 #include "high_concurrent_memory_pool.h"
 
+struct TreeNode {
+  int _val;
+  TreeNode* _left;
+  TreeNode* _right;
+
+  TreeNode() : _val(100), _left(nullptr), _right(nullptr) {}
+};
+
+void TestObjectPool() {
+  // 申请释放的轮次
+  const size_t Rounds = 5;
+
+  // 每轮申请释放多少次
+  const size_t N = 100000;
+
+  std::cout << "test vector<TreeNode*> vs ObjectPool<TreeNode>" << std::endl;
+  std::vector<TreeNode*> v1;
+  v1.reserve(N);
+
+  // std::cout << "vector<TreeNode*> begin" << std::endl;
+  auto start1 = std::chrono::high_resolution_clock::now();
+  for (size_t j = 0; j < Rounds; ++j) {
+    for (int i = 0; i < N; ++i) {
+      v1.push_back(new TreeNode);
+    }
+    for (int i = 0; i < N; ++i) {
+      delete v1[i];
+    }
+    v1.clear();
+  }
+  auto end1 = std::chrono::high_resolution_clock::now();
+  // std::cout << "vector<TreeNode*> end" << std::endl;
+
+  std::vector<TreeNode*> v2;
+  v2.reserve(N);
+
+  ObjectPool<TreeNode> TNPool;
+
+  // std::cout << "ObjectPool<TreeNode> begin" << std::endl;
+  auto start2 = std::chrono::high_resolution_clock::now();
+  for (size_t j = 0; j < Rounds; ++j) {
+    for (int i = 0; i < N; ++i) {
+      v2.push_back(TNPool.New());
+    }
+    for (int i = 0; i < N; ++i) {
+      TNPool.Delete(v2[i]);
+    }
+    v2.clear();
+  }
+  auto end2 = std::chrono::high_resolution_clock::now();
+  // std::cout << "ObjectPool<TreeNode> end" << std::endl;
+
+  std::cout << "vector<TreeNode*> time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end1 -
+                                                                     start1)
+                   .count()
+            << "ms" << std::endl;
+  std::cout << "ObjectPool<TreeNode> time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end2 -
+                                                                     start2)
+                   .count()
+            << "ms" << std::endl;
+}
+
 void BenchmarkMalloc(size_t ntimes, size_t nworks, size_t rounds) {
   std::vector<std::thread> vthread(nworks);
   std::atomic<size_t> malloc_costtime = 0;
@@ -97,6 +161,11 @@ void BenchmarkConcurrentMalloc(size_t ntimes, size_t nworks, size_t rounds) {
 }
 
 int main() {
+  TestObjectPool();
+  return 0;
+}
+
+int main2() {
   size_t n = 100000;
   std::cout << "=========================================================="
             << std::endl;

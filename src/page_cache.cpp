@@ -4,45 +4,6 @@ PageCache PageCache::page_cache_instance_;
 
 PageCache* PageCache::GetInstance() { return &page_cache_instance_; }
 
-// 按页数分配内存
-void* system_alloc(size_t page_count) {
-  size_t length = page_count * SYSTEM_PAGE_SIZE;
-#ifdef _WIN32
-  // MEM_COMMIT: 提交物理内存
-  // PAGE_READWRITE: 内存可读可写
-  void* ptr =
-      VirtualAlloc(nullptr, length, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-#else
-  // PROT_READ | PROT_WRITE: 内存可读可写
-  // MAP_PRIVATE | MAP_ANONYMOUS: 私有匿名映射，不与任何文件关联
-  void* ptr = mmap(nullptr, length, PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#endif
-
-  if (ptr == nullptr) {
-    throw std::bad_alloc();
-  }
-  return ptr;
-}
-
-// 释放由 system_alloc 分配的内存
-void system_dealloc(void* ptr, size_t page_count) {
-  if (ptr == nullptr) return;
-#ifdef _WIN32
-  if (VirtualFree(ptr, 0, MEM_RELEASE) == 0) {
-    throw std::runtime_error(std::string("Memory deallocation failed: ") +
-                             std::to_string(GetLastError()));
-  }
-#else
-  size_t length = page_count << kPageShift;
-
-  if (munmap(ptr, length) == -1) {
-    throw std::runtime_error(std::string("Memory deallocation failed: ") +
-                             strerror(errno));
-  }
-#endif
-}
-
 Span* PageCache::new_span(size_t page_count) {
   assert(page_count > 0);
 

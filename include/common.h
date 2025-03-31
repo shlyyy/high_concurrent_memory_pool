@@ -33,6 +33,10 @@ extern const size_t kPageShift;
 
 void *&get_next_obj(void *obj);
 
+void *system_alloc(size_t page_count);
+
+void system_dealloc(void *ptr, size_t page_count);
+
 class FreeList {
  public:
   void push_front(void *obj);

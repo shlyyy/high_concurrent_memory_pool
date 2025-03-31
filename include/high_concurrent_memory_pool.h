@@ -3,6 +3,7 @@
 
 #include "central_cache.h"
 #include "common.h"
+#include "object_pool.h"
 #include "page_cache.h"
 #include "thread_cache.h"
 
