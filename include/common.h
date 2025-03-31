@@ -28,8 +28,8 @@ const size_t N_FREE_LIST = 208;
 const size_t N_PAGES_BUCKET = 129;
 
 // 操作系统的页大小
-extern const size_t SYSTEM_PAGE_SIZE;
-extern const size_t kPageShift;
+const size_t SYSTEM_PAGE_SIZE = 4096;
+const size_t kPageShift = 12;
 
 void *&get_next_obj(void *obj);
 

@@ -1,26 +1,26 @@
 #include "common.h"
 
-const size_t SYSTEM_PAGE_SIZE = []() {
-#if defined(_WIN32)
-  SYSTEM_INFO si;
-  GetSystemInfo(&si);
-  return si.dwPageSize;
-#else
-  return sysconf(_SC_PAGESIZE);
-#endif
-}();
+// const size_t SYSTEM_PAGE_SIZE = []() {
+// #if defined(_WIN32)
+//   SYSTEM_INFO si;
+//   GetSystemInfo(&si);
+//   return si.dwPageSize;
+// #else
+//   return sysconf(_SC_PAGESIZE);
+// #endif
+// }();
 
-const size_t kPageShift = []() {
-  std::cout << "[SYSTEM_PAGE_SIZE]: " << SYSTEM_PAGE_SIZE << std::endl;
-  size_t page_size = SYSTEM_PAGE_SIZE;
-  size_t shift = 0;
-  while (page_size >>= 1) {
-    shift++;
-  }
+// const size_t kPageShift = []() {
+//   std::cout << "[SYSTEM_PAGE_SIZE]: " << SYSTEM_PAGE_SIZE << std::endl;
+//   size_t page_size = SYSTEM_PAGE_SIZE;
+//   size_t shift = 0;
+//   while (page_size >>= 1) {
+//     shift++;
+//   }
 
-  std::cout << "[kPageShift]: " << shift << std::endl;
-  return shift;
-}();
+//   std::cout << "[kPageShift]: " << shift << std::endl;
+//   return shift;
+// }();
 
 void*& get_next_obj(void* obj) { return *static_cast<void**>(obj); }
 

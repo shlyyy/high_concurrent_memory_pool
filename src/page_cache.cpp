@@ -16,8 +16,10 @@ Span* PageCache::new_span(size_t page_count) {
     span->n_pages_ = page_count;
 
     // 记录 page_id_ 和 span 的映射关系
-    page_id_span_map_[span->page_id_] = span;
-    page_id_span_map_[span->page_id_ + span->n_pages_ - 1] = span;
+    // page_id_span_map_[span->page_id_] = span;
+    // page_id_span_map_[span->page_id_ + span->n_pages_ - 1] = span;
+    page_id_span_map_.set(span->page_id_, span);
+    page_id_span_map_.set(span->page_id_ + span->n_pages_ - 1, span);
     return span;
   }
 
@@ -27,7 +29,8 @@ Span* PageCache::new_span(size_t page_count) {
 
     // 建立页号和 span 的映射关系
     for (size_t i = 0; i < span->n_pages_; ++i) {
-      page_id_span_map_[span->page_id_ + i] = span;
+      // page_id_span_map_[span->page_id_ + i] = span;
+      page_id_span_map_.set(span->page_id_ + i, span);
     }
     return span;
   }
@@ -49,13 +52,16 @@ Span* PageCache::new_span(size_t page_count) {
       span_lists_[span->n_pages_].push_front(span);
 
       // page cache 中的映射关系，方便 page cache 进行回收
-      page_id_span_map_[span->page_id_] = span;
-      page_id_span_map_[span->page_id_ + span->n_pages_ - 1] = span;
+      // page_id_span_map_[span->page_id_] = span;
+      // page_id_span_map_[span->page_id_ + span->n_pages_ - 1] = span;
+      page_id_span_map_.set(span->page_id_, span);
+      page_id_span_map_.set(span->page_id_ + span->n_pages_ - 1, span);
 
       // 返回切分下来的小块 span，方便 central cache
       // 回收小块内存时查找对应的span
       for (size_t i = 0; i < page_count; ++i) {
-        page_id_span_map_[split->page_id_ + i] = split;
+        // page_id_span_map_[split->page_id_ + i] = split;
+        page_id_span_map_.set(split->page_id_ + i, split);
       }
 
       return split;
@@ -80,13 +86,19 @@ Span* PageCache::new_span(size_t page_count) {
 }
 
 Span* PageCache::get_span_by_address(void* ptr) {
-  size_t page_id = reinterpret_cast<size_t>(ptr) / SYSTEM_PAGE_SIZE;
-  auto it = page_id_span_map_.find(page_id);
-  if (it == page_id_span_map_.end()) {
-    assert(false);
-    return nullptr;
-  }
-  return it->second;
+  // size_t page_id = reinterpret_cast<size_t>(ptr) >> kPageShift;
+  // std::unique_lock<std::mutex> lock(page_cache_lock_);
+  // auto it = page_id_span_map_.find(page_id);
+  // if (it == page_id_span_map_.end()) {
+  //   assert(false);
+  //   return nullptr;
+  // }
+  // return it->second;
+
+  size_t page_id = reinterpret_cast<size_t>(ptr) >> kPageShift;
+  Span* ret = static_cast<Span*>(page_id_span_map_.get(page_id));
+  assert(ret != nullptr);
+  return ret;
 }
 
 void PageCache::release_span_to_page_cache(Span* span) {
@@ -104,15 +116,25 @@ void PageCache::release_span_to_page_cache(Span* span) {
   // 对 span 前后的页尝试进行合并，缓解内存碎片问题
   while (1) {
     size_t prev_page_id = span->page_id_ - 1;
-    auto prev_it = page_id_span_map_.find(prev_page_id);
+
+    // auto prev_it = page_id_span_map_.find(prev_page_id);
+
+    // // 前面没有页了，无法合并
+    // if (prev_it == page_id_span_map_.end()) {
+    //   break;
+    // }
+
+    // // 前面的页是被占用的，无法合并
+    // Span* prev_span = prev_it->second;
+
+    Span* prev_span = static_cast<Span*>(page_id_span_map_.get(prev_page_id));
 
     // 前面没有页了，无法合并
-    if (prev_it == page_id_span_map_.end()) {
+    if (prev_span == nullptr) {
       break;
     }
 
     // 前面的页是被占用的，无法合并
-    Span* prev_span = prev_it->second;
     if (prev_span->is_used_ == true) {
       break;
     }
@@ -135,15 +157,24 @@ void PageCache::release_span_to_page_cache(Span* span) {
   // 向后合并
   while (1) {
     size_t next_page_id = span->page_id_ + span->n_pages_;
-    auto next_it = page_id_span_map_.find(next_page_id);
+    // auto next_it = page_id_span_map_.find(next_page_id);
+
+    // // 后面没有页了，无法合并
+    // if (next_it == page_id_span_map_.end()) {
+    //   break;
+    // }
+
+    // // 后面的页是被占用的，无法合并
+    // Span* next_span = next_it->second;
+
+    Span* next_span = static_cast<Span*>(page_id_span_map_.get(next_page_id));
 
     // 后面没有页了，无法合并
-    if (next_it == page_id_span_map_.end()) {
+    if (next_span == nullptr) {
       break;
     }
 
     // 后面的页是被占用的，无法合并
-    Span* next_span = next_it->second;
     if (next_span->is_used_ == true) {
       break;
     }
@@ -165,6 +196,9 @@ void PageCache::release_span_to_page_cache(Span* span) {
   // 将合并后的 span 插入到新的桶中，插入到 span_lists_ 中
   span_lists_[span->n_pages_].push_front(span);
   span->is_used_ = false;
-  page_id_span_map_[span->page_id_] = span;
-  page_id_span_map_[span->page_id_ + span->n_pages_ - 1] = span;
+  // page_id_span_map_[span->page_id_] = span;
+  // page_id_span_map_[span->page_id_ + span->n_pages_ - 1] = span;
+
+  page_id_span_map_.set(span->page_id_, span);
+  page_id_span_map_.set(span->page_id_ + span->n_pages_ - 1, span);
 }
