@@ -29,8 +29,10 @@ class PageCache {
  private:
   SpanList span_lists_[N_PAGES_BUCKET];
   // std::unordered_map<size_t, Span*> page_id_span_map_;
-  TCMalloc_PageMap2<32 - kPageShift> page_id_span_map_;  // kPageShift=12
+  // TCMalloc_PageMap2<48 - kPageShift> page_id_span_map_;  // kPageShift=12
   // TCMalloc_PageMap3<32 - kPageShift> page_id_span_map_{system_alloc};
+
+  PageMap<48 - kPageShift> page_id_span_map_;
 
   // span 对象的申请和释放都是在 page cache 中进行的
   ObjectPool<Span> span_pool_;

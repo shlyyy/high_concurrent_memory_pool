@@ -7,24 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 # set(CMAKE_BUILD_TYPE Debug)
 
-# 添加32位编译选项
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  message(STATUS "Building as 32-bit on 64-bit host")
-
-  # 设置编译标志
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m32")
-
-  # 添加32位头文件搜索路径
-  include_directories(/usr/include/i386-linux-gnu)
-
-  # 设置32位库搜索路径
-  link_directories(/usr/lib/i386-linux-gnu)
-else()
-  message(STATUS "Building as native 32-bit")
-endif()
-
 # 调试符号配置
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 

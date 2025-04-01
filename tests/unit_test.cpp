@@ -182,7 +182,7 @@ size_t generate_realistic_size(std::mt19937& gen) {
 
   // 限制最小16字节（避免过小），最大1GB（避免过大）
   size_t size = static_cast<size_t>(exp_dist(gen)) + 16;
-  return std::min(size, static_cast<size_t>(1UL << 30));  // 上限1GB
+  return (std::min)(size, static_cast<size_t>(1UL << 30));  // 上限1GB
 }
 
 void BenchmarkMalloc(size_t ntimes, size_t nworks, size_t rounds) {

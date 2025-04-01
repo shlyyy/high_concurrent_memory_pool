@@ -38,15 +38,16 @@ class TCMalloc_PageMap1 {
 };
 
 // Two-level radix tree
-template <int BITS>  // 页号所占位数：(32 - kPageShift) or (64 - kPageShift)
+template <size_t BITS>  // 页号所占位数：(32 - kPageShift) or (48 - kPageShift)
 class TCMalloc_PageMap2 {
  private:
   // Put 32 entries in the root and (2^BITS)/32 entries in each leaf.
-  static const int ROOT_BITS = 5;
-  static const int ROOT_LENGTH = 1 << ROOT_BITS;  // 32 first-level nodes
+  static const size_t ROOT_BITS = 5;
+  static const size_t ROOT_LENGTH = 1 << ROOT_BITS;  // 32 first-level nodes
 
-  static const int LEAF_BITS = BITS - ROOT_BITS;  // for 32(4K): 19 - 5 = 14
-  static const int LEAF_LENGTH = 1 << LEAF_BITS;  // each leaf has 2^14 entries
+  static const size_t LEAF_BITS = BITS - ROOT_BITS;  // for 32(4K): 19 - 5 = 14
+  static const size_t LEAF_LENGTH = 1
+                                    << LEAF_BITS;  // each leaf has 2^14 entries
 
   // Leaf node
   struct Leaf {
@@ -196,6 +197,67 @@ class TCMalloc_PageMap3 {
   }
 
   void PreallocateMoreMemory() {}
+};
+
+// 两级页表实现
+template <size_t BITS>
+class PageMap {
+ private:
+  // 固定叶节点位数为15位（参考TCMalloc）
+  static constexpr size_t kLeafBits = 15;
+  static constexpr size_t kLeafLength = 1 << kLeafBits;
+
+  // 根节点位数
+  static constexpr size_t kRootBits = BITS - kLeafBits;
+  static constexpr size_t kRootLength = 1 << kRootBits;
+
+  // 叶节点结构
+  struct Leaf {
+    void* values[kLeafLength];
+
+    Leaf() { memset(values, 0, sizeof(values)); }
+  };
+
+  Leaf* root_[kRootLength];  // 根节点数组
+
+ public:
+  typedef uintptr_t Number;
+
+  PageMap() { memset(root_, 0, sizeof(root_)); }
+
+  // 获取页面对应的指针
+  void* get(Number k) const {
+    if (k >> BITS) return nullptr;  // 超出范围
+
+    const Number i1 = k >> kLeafBits;
+    const Number i2 = k & (kLeafLength - 1);
+
+    if (i1 >= kRootLength || root_[i1] == nullptr) {
+      return nullptr;
+    }
+    return root_[i1]->values[i2];
+  }
+
+  // 设置页面对应的指针（自动分配所需内存）
+  void set(Number k, void* v) {
+    assert((k >> BITS) == 0);
+
+    const Number i1 = k >> kLeafBits;
+    const Number i2 = k & (kLeafLength - 1);
+
+    if (root_[i1] == nullptr) {
+      /*static ObjectPool<Leaf> leafPool;
+      Leaf* leaf = (Leaf*)leafPool.New();
+      root_[i1] = leaf;*/
+
+      static Fixed256KBlockPool leafPool;
+      Leaf* leaf = (Leaf*)leafPool.New();
+      memset(leaf, 0, sizeof(Leaf));
+      root_[i1] = leaf;
+    }
+
+    root_[i1]->values[i2] = v;
+  }
 };
 
 #endif  // __HIGH_CONCURRENT_MEMORY_POOL_PAGE_MAP_H__
